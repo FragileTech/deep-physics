@@ -1,10 +1,10 @@
 globals:
-  project_name: findjoe
+  project_name: deep_action
   default_branch: master
   owner: guillemdb
   author: guillemdb
   email: guillem@fragile.tech
-  description: ML Application for finding joe.
+  description: DNN for minimum action principle calculations.
   open_source: true
   project_url: https://git.toptal.com/felipe.batista/guillem-duran-ballester
 
@@ -87,7 +87,7 @@ docker:
   disable: false
   cuda: false
   cuda_image_type: "cudnn8-runtime-ubuntu20.04"
-  cuda_version: "11.2"
+  cuda_version: "11.6"
   python_version: "3.8"
   ubuntu_version: "20.04"
   base_image: "???"
