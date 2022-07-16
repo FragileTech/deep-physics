@@ -1,6 +1,6 @@
 # Contributing Guidelines
 
-deep_action is [MIT licensed](LICENSE) and accepts
+deep_physics is [MIT licensed](LICENSE) and accepts
 contributions via GitHub pull requests.  This document outlines some of the
 conventions on development workflow, commit message formatting, contact points,
 and other resources to make it easier to get your contribution accepted.

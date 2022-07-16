@@ -18,12 +18,12 @@ sys.path.insert(0, os.path.abspath("../../"))
 sys.setrecursionlimit(1500)
 
 # -- Project information -----------------------------------------------------
-project = "deep_action"
+project = "deep_physics"
 copyright = "2022, guillemdb"
 author = "guillemdb"
 
 # The short X.Y version
-from deep_action.version import __version__
+from deep_physics.version import __version__
 
 
 version = __version__
@@ -58,7 +58,7 @@ suppress_warnings = ["image.nonlocal_uri"]
 autodoc_typehints = "description"
 # Autoapi settings
 autoapi_type = "python"
-autoapi_dirs = ["../../deep_action"]
+autoapi_dirs = ["../../deep_physics"]
 autoapi_add_toctree_entry = True
 # Make use of custom templates
 autoapi_template_dir = "_autoapi_templates"

@@ -1,7 +1,7 @@
 import pytest
 
-from deep_action.physics import generate_trajectories, potential_energy
-from deep_action.functions import holder_table
+from deep_physics.functions import holder_table
+from deep_physics.physics import generate_trajectories, potential_energy
 
 
 @pytest.fixture()

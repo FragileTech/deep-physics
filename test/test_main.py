@@ -1,4 +1,4 @@
-from deep_action.__main__ import main
+from deep_physics.__main__ import main
 
 
 def test_main():

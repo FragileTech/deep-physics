@@ -41,7 +41,8 @@ class PositionalEncoding(nn.Module):
         """
         super().__init__()
 
-        # Create matrix of [SeqLen, HiddenDim] representing the positional encoding for max_len inputs
+        # Create matrix of [SeqLen, HiddenDim] representing the positional
+        # encoding for max_len inputs
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
@@ -49,9 +50,11 @@ class PositionalEncoding(nn.Module):
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
 
-        # register_buffer => Tensor which is not a parameter, but should be part of the modules state.
+        # register_buffer => Tensor which is not a parameter,
+        # but should be part of the modules state.
         # Used for tensors that need to be on the same device as the module.
-        # persistent=False tells PyTorch to not add the buffer to the state dict (e.g. when we save the model)
+        # persistent=False tells PyTorch to not add the buffer to the state dict
+        # (e.g. when we save the model)
         self.register_buffer("pe", pe, persistent=False)
 
     def forward(self, x):
@@ -83,7 +86,13 @@ class CrossEmbedLayer(nn.Module):
         self.convs = nn.ModuleList([])
         for kernel, dim_scale in zip(kernel_sizes, dim_scales):
             self.convs.append(
-                nn.Conv2d(dim_in, dim_scale, kernel, stride=stride, padding=(kernel - stride) // 2)
+                nn.Conv2d(
+                    dim_in,
+                    dim_scale,
+                    kernel,
+                    stride=stride,
+                    padding=(kernel - stride) // 2,
+                ),
             )
 
     def forward(self, x):
@@ -251,13 +260,23 @@ class ResnetBlock(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(
-        self, dim_resnet, latent_dim, latent_channels, dim_out, groups, norm=True, dropout=0
+        self,
+        dim_resnet,
+        latent_dim,
+        latent_channels,
+        dim_out,
+        groups,
+        norm=True,
+        dropout=0,
     ):
         super().__init__()
         self.dim_out = dim_out
         self.out_dim_resnet = latent_channels * latent_dim * latent_dim
         self.resnet = ResnetBlock(
-            dim=dim_resnet, dim_out=latent_channels, groups=groups, norm=norm
+            dim=dim_resnet,
+            dim_out=latent_channels,
+            groups=groups,
+            norm=norm,
         )
         self.out = nn.Sequential(
             nn.Linear(self.out_dim_resnet, self.dim_out),
@@ -418,60 +437,6 @@ class CosineWarmupScheduler(optim.lr_scheduler._LRScheduler):
 
 
 class PathLearner(pl.LightningModule):
-    def __init__(self, model, function):
-        super().__init__()
-        self.model = model
-        self.function = function
-        self.mse_loss = nn.MSELoss()
-
-    def training_step(self, batch, batch_idx):
-        # training_step defines the train loop.
-        # it is independent of forward
-        target, min_action = batch
-        pred = self.model(target)
-        action_loss, mse_loss, entropy = self.calculate_losses(pred, target, min_action)
-        #loss = mse_loss + 0.01 * action_loss - 0.00001 * entropy
-        loss = action_loss - 0.00001 * entropy
-        # Logging to TensorBoard by default
-        self.log("train_loss", loss)
-        self.log("action_loss", action_loss)
-        self.log("mse_loss", mse_loss)
-        self.log("entropy_loss", entropy)
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        target, min_action = batch
-        pred = self.model(target)
-        action_loss, mse_loss, entropy = self.calculate_losses(pred, target, min_action)
-        #loss = mse_loss + 0.1 * action_loss - 0.00001 * entropy
-        loss = action_loss - 0.00001 * entropy
-        self.log("val_train_loss", loss)
-        self.log("val_action_loss", action_loss)
-        self.log("val_mse_loss", mse_loss)
-        self.log("val_entropy_loss", entropy)
-        return loss
-
-    def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
-        return optimizer
-
-    def calculate_losses(self, pred, target, min_action):
-        mse_loss = self.mse_loss(pred, target)
-        action_pred = self.calculate_action(pred, target)
-        action_loss = (action_pred - min_action).mean()
-        entropy = self.model.latent_dist.dist.entropy().mean()
-        return action_loss, mse_loss, entropy
-
-    def calculate_action(self, pred, target):
-        bound_true, _ = split_path(target)
-        _, inner_pred = split_path(pred)
-        action_path_norm = reconstruct_path(bound_true, inner_pred)
-        pos_norm = action_path_norm[:, :, 0]
-        path = self.function.from_scaled(pos_norm)
-        return action(path, self.function, return_grad=False)
-
-
-class PathLearner(pl.LightningModule):
     def __init__(self, model, function, lr=1e-4, warmup=50, max_iters=2000):
         super().__init__()
         self.model = model
@@ -489,7 +454,7 @@ class PathLearner(pl.LightningModule):
         pred = self.model(target)
         action_loss, mse_loss, entropy = self.calculate_losses(pred, target, min_action)
         loss = mse_loss + 0.01 * action_loss - 0.00001 * entropy
-        #loss = action_loss  - 0.01 * entropy
+        # loss = action_loss  - 0.01 * entropy
         # Logging to TensorBoard by default
         self.log("train_loss", loss)
         self.log("action_loss", action_loss)
@@ -502,7 +467,7 @@ class PathLearner(pl.LightningModule):
         pred = self.model(target)
         action_loss, mse_loss, entropy = self.calculate_losses(pred, target, min_action)
         loss = mse_loss + 0.1 * action_loss - 0.00001 * entropy
-        #loss = action_loss  - 0.001 * entropy
+        # loss = action_loss  - 0.001 * entropy
         self.log("val_train_loss", loss)
         self.log("val_action_loss", action_loss)
         self.log("val_mse_loss", mse_loss)
@@ -511,9 +476,9 @@ class PathLearner(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.lr)
-        #self.lr_scheduler = CosineWarmupScheduler(
+        # self.lr_scheduler = CosineWarmupScheduler(
         #    optimizer, warmup=self.warmup, max_iters=self.max_iters
-        #)
+        # )
         return optimizer
 
     def calculate_losses(self, pred, target, min_action):

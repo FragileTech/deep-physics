@@ -1,6 +1,6 @@
 current_dir = $(shell pwd)
 
-PROJECT = deep_action
+PROJECT = deep_physics
 n ?= auto
 DOCKER_ORG = fragiletech
 DOCKER_TAG ?= ${PROJECT}

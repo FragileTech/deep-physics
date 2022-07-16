@@ -1,22 +1,15 @@
 import einops
-import holoviews as hv
-import numpy as np
 import torch
 
 
-def plot_landscape(function, bounds, n_points=100):
-    (x_min, x_max), (y_min, y_max) = bounds
-    xi = np.linspace(x_min, x_max, n_points)
-    yi = np.linspace(y_min, y_max, n_points)
-    xx, yy = np.meshgrid(xi, yi)
-    ins = np.concatenate([xx.reshape(-1, 1), yy.reshape(-1, 1)], 1)
-    zs, _ = function(torch.from_numpy(ins), reset_grad=True)
-    landscape = hv.QuadMesh((xx, yy, zs.reshape(n_points, n_points).detach().numpy()))
-    return landscape
-
-
 def leapfrog(
-    init_pos, init_momentum, grad, step_size, function, force=None, reset_grad: bool = True
+    init_pos,
+    init_momentum,
+    grad,
+    step_size,
+    function,
+    force=None,
+    reset_grad: bool = True,
 ):
     """Perfom a leapfrog jump in the Hamiltonian space
     INPUTS
@@ -70,7 +63,7 @@ def generate_trajectories(function, bounds, n_batch, steps=18, step_size=0.5, x0
     momentums = [p0[None, :]]
     potentials = [v0[None, :]]
     pot_grads = [grad0[None, :]]
-    for i in range(steps):
+    for _ in range(steps):
         x1, p1, grad1, v1 = leapfrog(
             init_pos=x0.detach(),
             init_momentum=p0,
@@ -114,7 +107,11 @@ def kinetic_energy(pos, p0=None, p=None, m=1):
 
 
 def potential_energy(
-    pos, potential, reset_grad: bool = False, return_grad: bool = True, scaled: bool = False
+    pos,
+    potential,
+    reset_grad: bool = False,
+    return_grad: bool = True,
+    scaled: bool = False,
 ):
     x = einops.rearrange(pos, "b t x -> (b t) x")
     data = potential(x, reset_grad=reset_grad, return_grad=return_grad, scaled=scaled)
@@ -135,7 +132,11 @@ def delta_potential(
     scaled: bool = False,
 ):
     data = potential_energy(
-        pos, potential, reset_grad=reset_grad, return_grad=return_grad, scaled=scaled
+        pos,
+        potential,
+        reset_grad=reset_grad,
+        return_grad=return_grad,
+        scaled=scaled,
     )
     pot = data[0] if return_grad else data
     delta_pot = discrete_diff(pot.unsqueeze(-1), dv0, keepdims=keepdims).squeeze(-1)

@@ -39,7 +39,7 @@ honor_noqa = true
 # Code coverage config
 [tool.coverage.run]
 branch = true
-source = ["deep_action"]
+source = ["deep_physics"]
 
 [tool.coverage.report]
 exclude_lines =["no cover",
@@ -59,8 +59,8 @@ max_line_length = 99 # show line of source code in output
 show_source = true
 inline_quotes='"'
 import_order_style = "appnexus"
-application_package_names = ["deep_action"]
-application_import_names = ["deep_action"]
+application_package_names = ["deep_physics"]
+application_import_names = ["deep_physics"]
 # Fix AttributeError: 'Namespace' object has no attribute 'extended_default_ignore'
 extended_default_ignore=[]
 

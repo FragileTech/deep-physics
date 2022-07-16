@@ -1,10 +1,10 @@
 FROM ubuntu:20.04
-ARG JUPYTER_PASSWORD="deep_action"
+ARG JUPYTER_PASSWORD="deep_physics"
 ENV BROWSER=/browser \
     LC_ALL=en_US.UTF-8 \
     LANG=en_US.UTF-8
 COPY Makefile.docker Makefile
-COPY . deep_action/
+COPY . deep_physics/
 
 RUN apt-get update && \
 	apt-get install -y --no-install-suggests --no-install-recommends make cmake && \
@@ -12,7 +12,7 @@ RUN apt-get update && \
     make install-common-dependencies && \
     make install-python-libs
 
-RUN cd deep_action \
+RUN cd deep_physics \
     && python3 -m pip install -U pip \
     && pip3 install -r requirements-lint.txt  \
     && pip3 install -r requirements-test.txt  \

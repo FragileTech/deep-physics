@@ -4,7 +4,7 @@ import numpy as np
 import pytorch_lightning as pl
 
 from deep_physics.dataloaders import PathDataModule
-from deep_physics.functions import sphere, holder_table, rastrigin
+from deep_physics.functions import holder_table  # rastrigin, sphere
 from deep_physics.models import MomentumNet, PathLearner
 
 
@@ -107,7 +107,6 @@ def main():
         logger=mlf_logger,
         track_grad_norm=track_grad_norm,
         max_epochs=max_epochs,
-
         check_val_every_n_epoch=check_val_every_n_epoch,
     )
     trainer.fit(model=learner, datamodule=data_module)

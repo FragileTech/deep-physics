@@ -1,4 +1,4 @@
-"""deep_action package installation metadata."""
+"""deep_physics package installation metadata."""
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
 

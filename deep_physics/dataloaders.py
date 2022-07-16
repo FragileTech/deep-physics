@@ -3,55 +3,24 @@ import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from deep_physics.physics import action, discrete_diff, generate_trajectories
-
-
-def split_path(path):
-    first = path[:, 0].unsqueeze(1)
-    last = path[:, -1].unsqueeze(1)
-    bound = torch.cat([first, last], 1)
-    return bound, path[:, 1:-1]
-
-
-def reconstruct_path(bound, pred):
-    first, last = bound[:, 0], bound[:, -1]
-    x0 = einops.rearrange(first, "b v x -> b 1 v x")
-    xt = einops.rearrange(last, "b v x -> b 1 v x")
-    path = torch.cat([x0, pred, xt], dim=1)
-    return path
+from deep_physics.physics import action, discrete_diff
+from deep_physics.system import System
 
 
 class TrajectoryDataset(Dataset):
-    def __init__(self, function, n_trajectories, path_len, step_size):
+    def __init__(self, function, path_len, step_size, n_samples):
         super().__init__()
-        self.function = function
-        self.n_trajectories = n_trajectories
-        self.path_len = path_len
-        self.step_size = step_size
         self.data = None
         self.action_data = None
-        self.generate_trajectories()
+        self.n_samples = n_samples
+        self.trajectories = System(function, path_len, step_size)
+        self.setup()
 
-    def generate_trajectories(self):
-        data = generate_trajectories(
-            self.function,
-            self.function.bounds,
-            n_batch=self.n_trajectories,
-            steps=self.path_len,
-            step_size=self.step_size,
-            p0=None,
-        )
-
-        pos_raw, _, pots, pot_grads = [x.detach().clone() for x in data]
-
-        max_x = self.function.bounds[0][1]  # Assumes domain is a square
-        ix = (pos_raw.abs() < abs(max_x)).all(1).all(1)
-        pos_raw = pos_raw[ix].detach().clone()
-        pots = pots[ix].detach().clone()
-        pot_grads = pot_grads[ix].detach().clone()
-
-        pos = einops.rearrange(pos_raw, "b t x -> b x t")
-        norm_pos = self.function.to_scaled(pos)
+    def setup(self):
+        pos, _, pots, pot_grads = self.trajectories.sample_trajectories(self.n_samples)
+        func = self.trajectories.potential
+        pos = einops.rearrange(pos, "b t x -> b x t")
+        norm_pos = func.to_scaled(pos)
         norm_pos = einops.rearrange(norm_pos, "b x t -> b t 1 x")
 
         norm_mom = discrete_diff(einops.rearrange(norm_pos, "b t 1 x -> b t x"))
@@ -64,7 +33,7 @@ class TrajectoryDataset(Dataset):
         delta_pots = einops.rearrange(delta_pots, "b t x -> b t 1 x")
         # This tensor has dimensions (batch, time, value_type, xy_values)
         self.data = torch.cat([norm_pos, norm_mom, norm_grads, delta_pots], dim=2)
-        self.action_data = action(pos_raw, self.function, return_grad=False)
+        self.action_data = action(pos, func, return_grad=False)
 
     def __len__(self):
         return self.data.shape[0]
@@ -106,7 +75,7 @@ class PathDataModule(pl.LightningDataModule):
             function=self.function,
             path_len=self.path_len,
             step_size=self.step_size,
-            n_trajectories=self.train_size,
+            n_samples=self.train_size,
         )
         return DataLoader(train_split, **self.dl_kwargs)
 
@@ -115,7 +84,7 @@ class PathDataModule(pl.LightningDataModule):
             function=self.function,
             path_len=self.path_len,
             step_size=self.step_size,
-            n_trajectories=self.val_size,
+            n_samples=self.val_size,
         )
         return DataLoader(val_split, **self.dl_kwargs)
 
@@ -124,6 +93,6 @@ class PathDataModule(pl.LightningDataModule):
             function=self.function,
             path_len=self.path_len,
             step_size=self.step_size,
-            n_trajectories=self.test_size,
+            n_samples=self.test_size,
         )
         return DataLoader(test_split, **self.dl_kwargs)

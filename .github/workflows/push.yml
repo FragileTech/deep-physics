@@ -9,9 +9,9 @@ on:
       - master
 
 env:
-  PROJECT_NAME: deep_action
-  PROJECT_DIR: deep_action
-  VERSION_FILE: deep_action/version.py
+  PROJECT_NAME: deep_physics
+  PROJECT_DIR: deep_physics
+  VERSION_FILE: deep_physics/version.py
   DEFAULT_BRANCH: master
   BOT_NAME: fragile-bot
   BOT_EMAIL: bot@fragile.tech
