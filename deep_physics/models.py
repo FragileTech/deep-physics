@@ -8,7 +8,7 @@ from torch import nn, optim
 from torch.distributions.multivariate_normal import MultivariateNormal
 import torch.nn.functional as F
 
-from deep_action.physics import action
+from deep_physics.physics import action
 
 
 def scaled_dot_product(q, k, v, mask=None):
@@ -430,8 +430,8 @@ class PathLearner(pl.LightningModule):
         target, min_action = batch
         pred = self.model(target)
         action_loss, mse_loss, entropy = self.calculate_losses(pred, target, min_action)
-        loss = mse_loss + 0.01 * action_loss - 0.00001 * entropy
-        # loss = action_loss  - 0.01 * entropy
+        #loss = mse_loss + 0.01 * action_loss - 0.00001 * entropy
+        loss = action_loss - 0.00001 * entropy
         # Logging to TensorBoard by default
         self.log("train_loss", loss)
         self.log("action_loss", action_loss)
@@ -443,8 +443,8 @@ class PathLearner(pl.LightningModule):
         target, min_action = batch
         pred = self.model(target)
         action_loss, mse_loss, entropy = self.calculate_losses(pred, target, min_action)
-        loss = mse_loss + 0.1 * action_loss - 0.00001 * entropy
-        # loss = action_loss  - 0.001 * entropy
+        #loss = mse_loss + 0.1 * action_loss - 0.00001 * entropy
+        loss = action_loss - 0.00001 * entropy
         self.log("val_train_loss", loss)
         self.log("val_action_loss", action_loss)
         self.log("val_mse_loss", mse_loss)
@@ -489,7 +489,7 @@ class PathLearner(pl.LightningModule):
         pred = self.model(target)
         action_loss, mse_loss, entropy = self.calculate_losses(pred, target, min_action)
         loss = mse_loss + 0.01 * action_loss - 0.00001 * entropy
-        # loss = action_loss  - 0.01 * entropy
+        #loss = action_loss  - 0.01 * entropy
         # Logging to TensorBoard by default
         self.log("train_loss", loss)
         self.log("action_loss", action_loss)
@@ -502,7 +502,7 @@ class PathLearner(pl.LightningModule):
         pred = self.model(target)
         action_loss, mse_loss, entropy = self.calculate_losses(pred, target, min_action)
         loss = mse_loss + 0.1 * action_loss - 0.00001 * entropy
-        # loss = action_loss  - 0.001 * entropy
+        #loss = action_loss  - 0.001 * entropy
         self.log("val_train_loss", loss)
         self.log("val_action_loss", action_loss)
         self.log("val_mse_loss", mse_loss)
@@ -511,9 +511,9 @@ class PathLearner(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.lr)
-        self.lr_scheduler = CosineWarmupScheduler(
-            optimizer, warmup=self.warmup, max_iters=self.max_iters
-        )
+        #self.lr_scheduler = CosineWarmupScheduler(
+        #    optimizer, warmup=self.warmup, max_iters=self.max_iters
+        #)
         return optimizer
 
     def calculate_losses(self, pred, target, min_action):

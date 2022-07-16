@@ -1,12 +1,12 @@
 globals:
-  project_name: deep_action
+  project_name: deep_physics
   default_branch: master
   owner: guillemdb
   author: guillemdb
   email: guillem@fragile.tech
   description: DNN for minimum action principle calculations.
   open_source: true
-  project_url: https://git.toptal.com/felipe.batista/guillem-duran-ballester
+  project_url: https://github.com/FragileTech/deep-physics
 
 license:
   disable: false

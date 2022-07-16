@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import torch
 
@@ -76,3 +77,10 @@ def himmelbau(x):
 @with_grad(bounds=((-5, 5), (-5, 5)))
 def sphere(x):
     return torch.sum(x**2, 1)
+
+@with_grad(bounds=((-5, 5), (-5, 5)))
+def rastrigin(x: np.ndarray) -> np.ndarray:
+    dims = x.shape[1]
+    A = 10
+    result = A * dims + torch.sum(x**2 - A * torch.cos(2 * math.pi * x), 1)
+    return result.flatten()

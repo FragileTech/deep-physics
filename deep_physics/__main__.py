@@ -3,20 +3,19 @@ import sys
 import numpy as np
 import pytorch_lightning as pl
 
-from deep_action.dataloaders import PathDataModule
-from deep_action.functions import sphere
-from deep_action.models import MomentumNet, PathLearner
+from deep_physics.dataloaders import PathDataModule
+from deep_physics.functions import sphere, holder_table, rastrigin
+from deep_physics.models import MomentumNet, PathLearner
 
 
 def main():
     # Parameters
     # PathDataModule
-    path_len = 5
+    path_len = 10
     dim_value = 4
     dim_x = 2
-    step_size = 0.05
-    function = sphere
-    batch_size = 32
+    step_size = 0.025
+    function = holder_table
 
     # CrossEmbedLayer
     dim_in_ce = 1
@@ -41,8 +40,8 @@ def main():
     in_dim_latent = (path_len - 1) * d_model
 
     # resnet decoder
-    latent_channels = 32
-    dim_out_resnet = 32
+    latent_channels = 64
+    # dim_out_resnet = 64
     groups = 2  # divisible by latent_channels
     norm = True
     dropout = 0.0
@@ -51,14 +50,25 @@ def main():
     dim_resnet_block = dim_value
 
     # training
-    warmup = 50
-    lr = 1e-4
+    warmup = 200
+    lr = 1e-5
+    batch_size = 16
+    max_iters = 5000
+    train_size = 250000
+    val_size = 1000
+    test_size = 200
+    track_grad_norm = -1
+    max_epochs = 100000
+    check_val_every_n_epoch = 1
 
     data_module = PathDataModule(
         function=function,
         path_len=path_len - 1,
         step_size=step_size,
         batch_size=batch_size,
+        train_size=train_size,
+        val_size=val_size,
+        test_size=test_size,
         num_workers=64,
     )
     from pytorch_lightning.loggers import MLFlowLogger
@@ -90,8 +100,16 @@ def main():
         dropout=dropout,
     )
 
-    learner = PathLearner(momnet, sphere, warmup=warmup, lr=lr)
-    trainer = pl.Trainer(accelerator="gpu", devices=1, logger=mlf_logger)
+    learner = PathLearner(momnet, function=function, warmup=warmup, lr=lr, max_iters=max_iters)
+    trainer = pl.Trainer(
+        accelerator="gpu",
+        devices=1,
+        logger=mlf_logger,
+        track_grad_norm=track_grad_norm,
+        max_epochs=max_epochs,
+
+        check_val_every_n_epoch=check_val_every_n_epoch,
+    )
     trainer.fit(model=learner, datamodule=data_module)
 
 

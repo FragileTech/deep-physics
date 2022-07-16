@@ -3,7 +3,7 @@ import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from deep_action.physics import action, discrete_diff, generate_trajectories
+from deep_physics.physics import action, discrete_diff, generate_trajectories
 
 
 def split_path(path):
@@ -48,6 +48,7 @@ class TrajectoryDataset(Dataset):
         ix = (pos_raw.abs() < abs(max_x)).all(1).all(1)
         pos_raw = pos_raw[ix].detach().clone()
         pots = pots[ix].detach().clone()
+        pot_grads = pot_grads[ix].detach().clone()
 
         pos = einops.rearrange(pos_raw, "b t x -> b x t")
         norm_pos = self.function.to_scaled(pos)

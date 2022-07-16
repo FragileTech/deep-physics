@@ -6,15 +6,15 @@ from setuptools import find_packages, setup
 
 
 version = SourceFileLoader(
-    "deep_action.version",
-    str(Path(__file__).parent / "deep_action" / "version.py"),
+    "deep_physics.version",
+    str(Path(__file__).parent / "deep_physics" / "version.py"),
 ).load_module()
 
 with open(Path(__file__).with_name("README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name="deep_action",
+    name="deep_physics",
     description="DNN for minimum action principle calculations.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -23,7 +23,7 @@ setup(
     license="MIT",
     author="guillemdb",
     author_email="guillem@fragile.tech",
-    url="https://git.toptal.com/felipe.batista/guillem-duran-ballester",
+    url="https://github.com/FragileTech/deep-physics",
     keywords=["Machine learning", "artificial intelligence"],
     test_suite="tests",
     tests_require=["pytest>=5.3.5", "hypothesis>=5.6.0"],
