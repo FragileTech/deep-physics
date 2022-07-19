@@ -13,27 +13,57 @@ class TrajectoryDataset(Dataset):
         self.data = None
         self.action_data = None
         self.n_samples = n_samples
-        self.trajectories = System(function, path_len, step_size)
+        self.system = System(function, path_len, step_size)
         self.setup()
 
+    def _setup(self):
+        pos, _, pots, pot_grads = self.system.sample_trajectories(self.n_samples, as_numpy=False)
+        self.action_data = action(pos, self.system.potential, return_grad=False)
+        x = pos.detach().clone()
+        x[:, :, 0] = self.system.potential.to_scale_x_vector(x[:, :, 0])
+        x[:, :, 1] = self.system.potential.to_scale_y_vector(x[:, :, 1])
+        norm_mom = discrete_diff(pos)
+        norm_mom[:, :, 0] = self.system.potential.to_scale_x_vector(norm_mom[:, :, 0])
+        norm_mom[:, :, 1] = self.system.potential.to_scale_y_vector(norm_mom[:, :, 1])
+
+        norm_pos = einops.rearrange(x, "b t x -> b t x 1")
+        norm_mom = einops.rearrange(norm_mom, "b t x -> b t x 1")
+        norm_grads = pot_grads / pot_grads.norm(dim=-1).unsqueeze(-1)
+        norm_grads = einops.rearrange(norm_grads, "b t x -> b t x 1")
+
+        delta_pots = discrete_diff(pots).repeat(1, 1, 2)
+        delta_pots = einops.rearrange(delta_pots, "b t x -> b t x 1")
+        # This tensor has dimensions (batch, time, value_type, xy_values)
+        self.data = torch.cat([norm_pos, norm_mom, norm_grads, delta_pots], dim=-1)
+
     def setup(self):
-        pos, _, pots, pot_grads = self.trajectories.sample_trajectories(self.n_samples)
-        func = self.trajectories.potential
-        pos = einops.rearrange(pos, "b t x -> b x t")
-        norm_pos = func.to_scaled(pos)
-        norm_pos = einops.rearrange(norm_pos, "b x t -> b t 1 x")
+        pos, _, pots, pot_grads = self.system.sample_trajectories(self.n_samples, as_numpy=False)
+        self.action_data = action(pos, self.system.potential, return_grad=False)
+        x = pos.detach().clone()
+        x[:, :, 0] = self.system.potential.to_scale_x_vector(x[:, :, 0])
+        x[:, :, 1] = self.system.potential.to_scale_y_vector(x[:, :, 1])
+        norm_mom = discrete_diff(pos)
+        norm_mom[:, :, 0] = self.system.potential.to_scale_x_vector(norm_mom[:, :, 0])
+        norm_mom[:, :, 1] = self.system.potential.to_scale_y_vector(norm_mom[:, :, 1])
 
-        norm_mom = discrete_diff(einops.rearrange(norm_pos, "b t 1 x -> b t x"))
+        norm_pos = einops.rearrange(x, "b t x -> b t 1 x")
         norm_mom = einops.rearrange(norm_mom, "b t x -> b t 1 x")
-
         norm_grads = pot_grads / pot_grads.norm(dim=-1).unsqueeze(-1)
         norm_grads = einops.rearrange(norm_grads, "b t x -> b t 1 x")
 
         delta_pots = discrete_diff(pots).repeat(1, 1, 2)
         delta_pots = einops.rearrange(delta_pots, "b t x -> b t 1 x")
         # This tensor has dimensions (batch, time, value_type, xy_values)
-        self.data = torch.cat([norm_pos, norm_mom, norm_grads, delta_pots], dim=2)
-        self.action_data = action(pos, func, return_grad=False)
+        self.data = torch.cat(
+            [
+                norm_pos,
+                torch.zeros_like(norm_mom),
+                torch.zeros_like(norm_grads),
+                torch.zeros_like(delta_pots),
+            ],
+            dim=2,
+        )
+        self.data = norm_pos
 
     def __len__(self):
         return self.data.shape[0]
@@ -63,36 +93,64 @@ class PathDataModule(pl.LightningDataModule):
         self.test_size = test_size
         self.val_size = val_size
         self.dl_kwargs = kwargs
-
-    # def prepare_data(self):
-    # download, split, etc...
-    # only called on 1 GPU/TPU in distributed
-    # def setup(self, stage):
-    # make assignments here (val/train/test split)
-    # called on every process in DDP
-    def train_dataloader(self):
-        train_split = TrajectoryDataset(
+        """self.train_split = TrajectoryDataset(
             function=self.function,
             path_len=self.path_len,
             step_size=self.step_size,
             n_samples=self.train_size,
         )
-        return DataLoader(train_split, **self.dl_kwargs)
-
-    def val_dataloader(self):
-        val_split = TrajectoryDataset(
+        self.val_split = TrajectoryDataset(
             function=self.function,
             path_len=self.path_len,
             step_size=self.step_size,
             n_samples=self.val_size,
         )
-        return DataLoader(val_split, **self.dl_kwargs)
+        self.test_split = TrajectoryDataset(
+            function=self.function,
+            path_len=self.path_len,
+            step_size=self.step_size,
+            n_samples=self.test_size,
+        )"""
 
-    def test_dataloader(self):
-        test_split = TrajectoryDataset(
+    # def prepare_data(self):
+    # download, split, etc...
+    # only called on 1 GPU/TPU in distributed
+
+    def setup(self, stage=None):
+        # make assignments here (val/train/test split)
+        # called on every process in DDP
+        self.train_split = TrajectoryDataset(
+            function=self.function,
+            path_len=self.path_len,
+            step_size=self.step_size,
+            n_samples=self.train_size,
+        )
+        self.val_split = TrajectoryDataset(
+            function=self.function,
+            path_len=self.path_len,
+            step_size=self.step_size,
+            n_samples=self.val_size,
+        )
+        self.test_split = TrajectoryDataset(
             function=self.function,
             path_len=self.path_len,
             step_size=self.step_size,
             n_samples=self.test_size,
         )
-        return DataLoader(test_split, **self.dl_kwargs)
+
+    def train_dataloader(self):
+        self.train_split = TrajectoryDataset(
+            function=self.function,
+            path_len=self.path_len,
+            step_size=self.step_size,
+            n_samples=self.train_size,
+        )
+        return DataLoader(self.train_split, **self.dl_kwargs)
+
+    def val_dataloader(self):
+
+        return DataLoader(self.val_split, **self.dl_kwargs)
+
+    def test_dataloader(self):
+
+        return DataLoader(self.test_split, **self.dl_kwargs)

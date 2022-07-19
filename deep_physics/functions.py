@@ -18,7 +18,8 @@ class Potential:
 
     def __call__(self, x, reset_grad=False, return_grad=True, scaled=False):
         if scaled:
-            x = self.from_scaled(x)
+            pass
+            # x = self.from_scaled(x)
         if (reset_grad and return_grad) or (return_grad and x.grad is None):
             x = reset_grads(x)
 
@@ -33,17 +34,51 @@ class Potential:
     def bounds(self):
         return self._bounds
 
-    def from_scaled(self, x):
-        (x_min, x_max), (y_min, y_max) = self.bounds
-        x[:, 0] = ((x[:, 0] + 1) / 2) * (x_max - x_min) + x_min
-        x[:, 1] = ((x[:, 1] + 1) / 2) * (y_max - y_min) + y_min
+    def from_scale_x_vector(self, x):
+        (x_min, x_max), _ = self.bounds
+        x = ((x + 1) / 2) * (x_max - x_min) + x_min
         return x
 
-    def to_scaled(self, x):
-        (x_min, x_max), (y_min, y_max) = self.bounds
-        x[:, 0] = (((x[:, 0] - x_min) / (x_max - x_min)) * 2) - 1
-        x[:, 1] = (((x[:, 1] - y_min) / (y_max - y_min)) * 2) - 1
+    def from_scale_y_vector(self, y):
+        _, (y_min, y_max) = self.bounds
+        y = ((y + 1) / 2) * (y_max - y_min) + y_min
+        return y
+
+    def to_scale_x_vector(self, x):
+        (x_min, x_max), _ = self.bounds
+        x = (((x - x_min) / (x_max - x_min)) * 2) - 1
         return x
+
+    def to_scale_y_vector(self, y):
+        _, (y_min, y_max) = self.bounds
+        y = (((y - y_min) / (y_max - y_min)) * 2) - 1
+        return y
+
+    def extract_x_coordinates(self, x):
+        if len(x.shape) == 2:
+            x_ix = x[:, 0]
+            y_ix = x[:, 1]
+        elif len(x.shape) == 3:
+            x_ix = x[:, :, 0]
+            y_ix = x[:, :, 1]
+        elif len(x.shape) == 4:
+            x_ix = x[:, :, 0, 0]
+            y_ix = x[:, :, 0, 1]
+        else:
+            raise NotImplementedError()
+        return x_ix, y_ix
+
+    def from_scaled_pos(self, x):
+        x_ix, y_ix = self.extract_x_coordinates(x)
+        xs = self.from_scale_x_vector(x_ix).unsqueeze(-1)
+        ys = self.from_scale_y_vector(y_ix).unsqueeze(-1)
+        return torch.cat([xs, ys], dim=-1)
+
+    def to_scaled_pos(self, x):
+        x_ix, y_ix = self.extract_x_coordinates(x)
+        xs = self.to_scale_x_vector(x_ix).unsqueeze(-1)
+        ys = self.to_scale_y_vector(y_ix).unsqueeze(-1)
+        return torch.cat([xs, ys], dim=-1)
 
 
 def with_grad(bounds=None):
@@ -80,7 +115,12 @@ def sphere(x):
     return torch.sum(x**2, 1)
 
 
-@with_grad(bounds=((-5.12, 55.12), (-55.12, 55.12)))
+@with_grad(bounds=((-5, 5), (-5, 5)))
+def dummy(x):
+    return x[:, 1]
+
+
+@with_grad(bounds=((-5.12, 5.12), (-5.12, 5.12)))
 def rastrigin(x: np.ndarray) -> np.ndarray:
     dims = x.shape[1]
     A = 10

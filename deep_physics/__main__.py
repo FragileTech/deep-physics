@@ -5,14 +5,16 @@ import pytorch_lightning as pl
 
 from deep_physics.dataloaders import PathDataModule
 from deep_physics.functions import holder_table  # rastrigin, sphere
-from deep_physics.models import MomentumNet, PathLearner
+from deep_physics.models import MomentumNet
+from deep_physics.storage import METRICS_REGISTRY
+from deep_physics.training import PathLearner
 
 
 def main():
     # Parameters
     # PathDataModule
     path_len = 10
-    dim_value = 4
+    dim_value = 1
     dim_x = 2
     step_size = 0.025
     function = holder_table
@@ -36,13 +38,13 @@ def main():
     input_dim = d_model
 
     # LatentDistribution
-    out_dim_latent = 144  # 256
+    out_dim_latent = 121  # 256
     in_dim_latent = (path_len - 1) * d_model
 
     # resnet decoder
     latent_channels = 64
     # dim_out_resnet = 64
-    groups = 2  # divisible by latent_channels
+    groups = 1  # divisible by latent_channels
     norm = True
     dropout = 0.0
     dim_out_decoder = path_len * dim_value * dim_x
@@ -73,7 +75,9 @@ def main():
     )
     from pytorch_lightning.loggers import MLFlowLogger
 
-    mlf_logger = MLFlowLogger(experiment_name="lightning_logs")
+    mlf_logger = MLFlowLogger(
+        experiment_name="lightning_logs", tracking_uri=f"file:{METRICS_REGISTRY}"
+    )
 
     momnet = MomentumNet(
         d_model=d_model,
@@ -100,7 +104,9 @@ def main():
         dropout=dropout,
     )
 
-    learner = PathLearner(momnet, function=function, warmup=warmup, lr=lr, max_iters=max_iters)
+    learner = PathLearner(
+        momnet, function=function, warmup=warmup, lr=lr, max_iters=max_iters, step_size=step_size
+    )
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=1,

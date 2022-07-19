@@ -37,27 +37,33 @@ def leapfrog(
         new lnp
     """
     force = 0.0 if force is None else force
-    # make half step in init_momentum
-    new_momentum = init_momentum + 0.5 * step_size * (force - grad)
-    # make new step in theta
-    new_position = init_pos + step_size * new_momentum
-    # compute new gradient
+    # make half step in init_momentum. V0.5t
+    init_acc = force - grad
+    mom_half_step = init_momentum + 0.5 * step_size * init_acc
+    # make new step in theta. x1
+    new_position = init_pos + step_size * mom_half_step
+    # compute new gradient. V1, Vgrad1
     new_potential, gradprime = function(new_position, reset_grad=reset_grad)
     # make half step in init_momentum again
-    new_momentum = new_momentum + 0.5 * step_size * (force - gradprime)
+    new_acc = force - gradprime
+    new_momentum = mom_half_step + 0.5 * step_size * new_acc
     return new_position, new_momentum, gradprime, new_potential
 
 
-def generate_trajectories(function, bounds, n_batch, steps=18, step_size=0.5, x0=None, p0=None):
-    (x_min, x_max), (y_min, y_max) = bounds
+def generate_trajectories(
+    function, bounds, n_batch, steps=18, step_size=0.5, x0=None, p0=None, random_p0: bool = False
+):
     if x0 is None:
-        x0 = torch.rand((n_batch, 2))
-        x0[:, 0] = x0[:, 0] * (x_max - x_min) + x_min
-        x0[:, 1] = x0[:, 1] * (y_max - y_min) + y_min
+        x0 = (torch.rand((n_batch, 2)) * 2) - 1
+        x0 = function.from_scaled_pos(x0)
 
     x0.requires_grad_()
     if p0 is None:
-        p0 = torch.zeros((n_batch, 2))
+        if random_p0:
+            p0 = torch.randn((n_batch, 2))  # - 0.5
+            # p0 = function.from_scaled_pos(p0)
+        else:
+            p0 = torch.zeros((n_batch, 2))
     v0, grad0 = function(x0)
     positions = [x0[None, :]]
     momentums = [p0[None, :]]
@@ -91,6 +97,7 @@ def generate_trajectories(function, bounds, n_batch, steps=18, step_size=0.5, x0
 
 
 def discrete_diff(x, x0=None, keepdims: bool = True):
+    # Assumes dimenstions (batch, time, others)
     deltas = x[:, 1:] - x[:, :-1]
     if not keepdims:
         return deltas
@@ -190,6 +197,38 @@ def action(
     )
     lagrangian_ = einops.reduce(data[0] if return_grad else data, "b t -> b", "sum")
     return (lagrangian_, data[1]) if return_grad else lagrangian_
+
+
+def __forces_newton(pos, potential, step_size):
+    vel = discrete_diff(pos)
+    acc = discrete_diff(vel)
+
+    _, grad = potential(
+        pos.detach().clone(),
+        reset_grad=False,
+        return_grad=True,
+        scaled=False,
+    )
+    grad_stepped = grad * step_size**2
+    grad_froces = grad_stepped[:, 1:-1]
+    acc_force = acc[:, 2:]
+    return (grad_froces.pow(2) - acc_force.pow(2)).norm(dim=-1)
+
+
+def forces_newton(pos, potential, step_size):
+    vel = discrete_diff(pos)
+    acc = discrete_diff(vel)
+    _, grad = potential_energy(
+        pos.detach(),
+        potential,
+        reset_grad=True,
+        return_grad=True,
+        scaled=False,
+    )
+    grad_stepped = grad * step_size**2
+    grad_froces = grad_stepped[:, 1:-1]
+    acc_force = acc[:, 2:]
+    return (grad_froces.pow(2) - acc_force.pow(2)).sum()
 
 
 def variate(pos, dt=0.05):
