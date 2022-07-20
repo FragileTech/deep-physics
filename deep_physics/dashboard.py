@@ -278,7 +278,7 @@ class VAEDashboard(param.Parameterized):
         checkpoint = (
             "epoch=588-step=701131.ckpt"
             if self.toggle_model.value == "MSE"
-            else "epoch=74-step=89303.ckpt"
+            else "epoch=218-step=260763.ckpt"
         )
         self.model = PathVAELearner.load_from_checkpoint(
             str(Path(__file__).parent.parent / checkpoint),

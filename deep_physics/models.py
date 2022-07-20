@@ -247,7 +247,6 @@ class ResnetBlock(nn.Module):
         super().__init__()
         self.block1 = Block(dim, dim_out, groups=groups, norm=True)
         self.block2 = Block(dim_out, dim_out, groups=groups, norm=True)
-
         self.res_conv = nn.Conv2d(dim, dim_out, 1) if dim != dim_out else Identity()
 
     def forward(self, x):
@@ -283,6 +282,7 @@ class Decoder(nn.Module):
 
     def forward(self, x, scale_shift=None):
         z = self.resnet(x)
+        # r c stands for row and column
         z = einops.rearrange(z, "b t r c -> b (t r c)")
         return self.out(z)
 
@@ -295,7 +295,7 @@ class LatentDistribution(nn.Module):
         self.cov_mat_dim = int(self.out_dim * self.out_dim)
 
         self.cov_linear = nn.Linear(self.input_dim, self.cov_mat_dim)
-        nn.init.eye_(self.cov_linear.weight)
+        nn.init.kaiming_uniform_(self.cov_linear.weight)
         self.cov_layer = nn.Sequential(self.cov_linear, nn.ReLU())
         self.mean_layer = nn.Sequential(nn.Linear(self.input_dim, self.out_dim), nn.ReLU())
         self.dist = None

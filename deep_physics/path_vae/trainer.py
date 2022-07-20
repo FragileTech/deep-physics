@@ -31,7 +31,7 @@ class PathVAELearner(pl.LightningModule):
         model_in[:, mask - 1 : mask + 1] = -2.0
         pred = self.model(model_in)
         mse_loss, entropy, action_loss = self.calculate_losses(pred, target)
-        loss = mse_loss + 0.1 * action_loss - 0.00001 * entropy
+        loss = action_loss - 0.00001 * entropy
         # loss = action_loss + newton - 0.0001 * entropy
         # Logging to TensorBoard by default
         self.log("train_loss", loss)
@@ -48,7 +48,7 @@ class PathVAELearner(pl.LightningModule):
         model_in[:, mask - 1 : mask + 1] = -2.0
         pred = self.model(model_in)
         mse_loss, entropy, action_loss = self.calculate_losses(pred, target)
-        loss = mse_loss + 0.1 * action_loss - 0.00001 * entropy
+        loss = action_loss - 0.00001 * entropy
         self.log("val_train_loss", loss)
         self.log("val_action_loss", action_loss)
         self.log("val_mse_loss", mse_loss)

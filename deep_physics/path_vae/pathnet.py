@@ -69,8 +69,6 @@ class CrossEmbedLayerPos(nn.Module):
         # dimensions are assigned to the last conv layer.
         dim_scales = [int(dim_out / (2**i)) for i in range(1, num_scales)]
         dim_scales = [*dim_scales, dim_out - sum(dim_scales)]
-
-        # conv layer for path estimation with kernel size 1
         self.convs = nn.ModuleList([])
         for kernel, dim_scale in zip(kernel_sizes, dim_scales):
             self.convs.append(
@@ -188,7 +186,6 @@ class AttentionDistEncoder(nn.Module):
     def forward(self, x):
         if self.use_pos_encoding:
             x = self.pos_encoder(x)
-        # x = einops.rearrange(x, "b t x -> b 1 x t")
         x = self.cross_embed(x)
         x = einops.rearrange(x, "b c w h -> b c (w h)")
         x = self.transformer(x)

@@ -18,16 +18,16 @@ def main():
     function = holder_table
     kernel_sizes = (2, 4, 8)
     stride = 2
-    dim_embedding = 128
+    dim_embedding = 32
     layers_transformer = 2
-    n_heads_attention = 4
+    n_heads_attention = 2
     dropout = 0
-    dim_feedforward = 64
+    dim_feedforward = 32
     use_pos_encoding = True
     dim_latent = 100
     # training
     warmup = 200
-    lr = 1e-7
+    lr = 1e-3
     batch_size = 64
     max_iters = 5000
     train_size = 128000
